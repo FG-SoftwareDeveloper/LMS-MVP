@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Analytics - LearnHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .analytics-card {
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .analytics-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .metric-change {
+            font-size: 0.875rem;
+        }
+        .metric-change.positive { color: #28a745; }
+        .metric-change.negative { color: #dc3545; }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Include instructor sidebar here -->
+            
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-chart-line me-2"></i>Course Analytics
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-calendar me-1"></i>Last 30 Days
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-download me-1"></i>Export Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Course Selection -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <select class="form-select" id="courseSelect" onchange="loadCourseAnalytics()">
+                            <option value="">Select a course...</option>
+                            <option th:each="course : ${courses}" 
+                                    th:value="${course.id}" 
+                                    th:text="${course.title}"
+                                    th:selected="${selectedCourse != null && selectedCourse.id == course.id}">
+                                Course Title
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Analytics Content (shown when course is selected) -->
+                <div id="analyticsContent" th:if="${selectedCourse != null}">
+                    <!-- Key Metrics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="analytics-card card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                    <div class="metric-value" th:text="${analytics.totalEnrollments}">156</div>
+                                    <p class="mb-1">Total Enrollments</p>
+                                    <div class="metric-change positive">
+                                        <i class="fas fa-arrow-up"></i> +12% this month
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="analytics-card card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-graduation-cap fa-2x text-success mb-2"></i>
+                                    <div class="metric-value" th:text="${analytics.completionRate + '%'}">68%</div>
+                                    <p class="mb-1">Completion Rate</p>
+                                    <div class="metric-change positive">
+                                        <i class="fas fa-arrow-up"></i> +5% this month
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="analytics-card card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                                    <div class="metric-value" th:text="${analytics.averageProgress + '%'}">45%</div>
+                                    <p class="mb-1">Avg Progress</p>
+                                    <div class="metric-change positive">
+                                        <i class="fas fa-arrow-up"></i> +3% this month
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="analytics-card card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-star fa-2x text-info mb-2"></i>
+                                    <div class="metric-value" th:text="${selectedCourse.rating}">4.8</div>
+                                    <p class="mb-1">Course Rating</p>
+                                    <div class="metric-change positive">
+                                        <i class="fas fa-arrow-up"></i> +0.2 this month
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="analytics-card card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-chart-area me-2"></i>Enrollment & Progress Trends
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="progressChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="analytics-card card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-chart-pie me-2"></i>Completion Status
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="completionChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student Performance Table -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="analytics-card card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-table me-2"></i>Student Performance
+                                    </h5>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="exportStudentData()">
+                                        <i class="fas fa-download me-1"></i>Export
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Student</th>
+                                                    <th>Progress</th>
+                                                    <th>Time Spent</th>
+                                                    <th>Last Activity</th>
+                                                    <th>Level</th>
+                                                    <th>Points</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr th:each="student : ${studentProgress}">
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <img th:src="${student.user.avatarUrl}" 
+                                                                 th:alt="${student.user.fullName}"
+                                                                 class="rounded-circle me-2" 
+                                                                 width="32" height="32"
+                                                                 th:if="${student.user.avatarUrl}">
+                                                            <div th:unless="${student.user.avatarUrl}" 
+                                                                 class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2"
+                                                                 style="width: 32px; height: 32px;">
+                                                                <i class="fas fa-user text-white"></i>
+                                                            </div>
+                                                            <span th:text="${student.user.fullName}">John Doe</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 20px;">
+                                                            <div class="progress-bar" 
+                                                                 th:style="'width: ' + ${student.completionPercentage} + '%'"
+                                                                 th:text="${student.completionPercentage + '%'}">75%</div>
+                                                        </div>
+                                                    </td>
+                                                    <td th:text="${student.timeSpent + ' min'}">120 min</td>
+                                                    <td th:text="${#temporals.format(student.lastAccessedAt, 'MMM dd, HH:mm')}">Jan 15, 14:30</td>
+                                                    <td>
+                                                        <span class="badge bg-primary" th:text="'Level ' + ${student.userLevel?.currentLevel ?: 1}">Level 5</span>
+                                                    </td>
+                                                    <td th:text="${student.userLevel?.totalPoints ?: 0}">2,840</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assessment Analytics -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="analytics-card card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-clipboard-check me-2"></i>Assessment Performance
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="assessmentChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="analytics-card card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-gamepad me-2"></i>Game Engagement
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="gameChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function loadCourseAnalytics() {
+            const courseId = document.getElementById('courseSelect').value;
+            if (courseId) {
+                window.location.href = `/instructor/analytics?courseId=${courseId}`;
+            }
+        }
+
+        function exportStudentData() {
+            const courseId = document.getElementById('courseSelect').value;
+            if (courseId) {
+                window.open(`/api/v1/analytics/reports/student-progress/excel?courseId=${courseId}`, '_blank');
+            }
+        }
+
+        // Initialize charts
+        document.addEventListener('DOMContentLoaded', function() {
+            // Progress Trend Chart
+            const progressCtx = document.getElementById('progressChart').getContext('2d');
+            new Chart(progressCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Enrollments',
+                        data: [12, 19, 15, 25],
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Completions',
+                        data: [5, 8, 12, 17],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+
+            // Completion Status Pie Chart
+            const completionCtx = document.getElementById('completionChart').getContext('2d');
+            new Chart(completionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'In Progress', 'Not Started'],
+                    datasets: [{
+                        data: [68, 25, 7],
+                        backgroundColor: ['#28a745', '#ffc107', '#6c757d']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+
+            // Assessment Performance Chart
+            const assessmentCtx = document.getElementById('assessmentChart').getContext('2d');
+            new Chart(assessmentCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Quiz 1', 'Quiz 2', 'Midterm', 'Final'],
+                    datasets: [{
+                        label: 'Average Score',
+                        data: [85, 78, 82, 88],
+                        backgroundColor: '#17a2b8'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // Game Engagement Chart
+            const gameCtx = document.getElementById('gameChart').getContext('2d');
+            new Chart(gameCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Completion Rate', 'Average Score', 'Retry Rate', 'Time Spent', 'Engagement'],
+                    datasets: [{
+                        label: 'Game Performance',
+                        data: [75, 82, 15, 88, 79],
+                        borderColor: '#e83e8c',
+                        backgroundColor: 'rgba(232, 62, 140, 0.2)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

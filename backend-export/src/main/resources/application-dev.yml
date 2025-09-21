@@ -1,0 +1,79 @@
+# Development Configuration
+server:
+  port: 8080
+
+spring:
+  application:
+    name: LMS Gaming Platform
+  
+  # H2 Database for Development
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+  
+  # Email Configuration (Development)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: test@example.com
+    password: test-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# JWT Configuration
+jwt:
+  secret: mySecretKey123456789012345678901234567890123456789012345678901234567890
+  expiration: 86400000 # 24 hours
+  refresh-expiration: 604800000 # 7 days
+
+# Application Configuration
+app:
+  name: LearnHub Gaming Platform
+  version: 1.0.0
+  frontend-url: http://localhost:5173
+
+# External Service Configuration (Development)
+stripe:
+  api:
+    key: sk_test_your_stripe_secret_key
+    
+zoom:
+  api:
+    key: your_zoom_api_key
+    secret: your_zoom_api_secret
+
+# Logging
+logging:
+  level:
+    com.learnhub: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - LearnHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .offline-card {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            padding: 3rem;
+            max-width: 500px;
+        }
+        .offline-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-card">
+        <div class="offline-icon pulse">
+            <i class="fas fa-wifi-slash"></i>
+        </div>
+        <h1 class="h2 mb-3">You're Offline</h1>
+        <p class="lead mb-4">
+            It looks like you've lost your internet connection. Don't worry, you can still access 
+            some content that's been saved for offline viewing.
+        </p>
+        
+        <div class="mb-4">
+            <h5>Available Offline:</h5>
+            <ul class="list-unstyled">
+                <li><i class="fas fa-check text-success me-2"></i>Previously viewed lessons</li>
+                <li><i class="fas fa-check text-success me-2"></i>Downloaded course materials</li>
+                <li><i class="fas fa-check text-success me-2"></i>Offline games</li>
+                <li><i class="fas fa-check text-success me-2"></i>Your progress data</li>
+            </ul>
+        </div>
+        
+        <div class="d-grid gap-2">
+            <button class="btn btn-primary btn-lg" onclick="checkConnection()">
+                <i class="fas fa-sync-alt me-2"></i>Try Again
+            </button>
+            <button class="btn btn-outline-secondary" onclick="viewOfflineContent()">
+                <i class="fas fa-download me-2"></i>View Offline Content
+            </button>
+        </div>
+        
+        <div class="mt-4">
+            <small class="text-muted">
+                Your progress will be synced automatically when you're back online.
+            </small>
+        </div>
+    </div>
+
+    <script>
+        function checkConnection() {
+            if (navigator.onLine) {
+                window.location.reload();
+            } else {
+                alert('Still offline. Please check your internet connection.');
+            }
+        }
+        
+        function viewOfflineContent() {
+            // Redirect to cached content or show offline content list
+            window.location.href = '/offline-content';
+        }
+        
+        // Listen for online/offline events
+        window.addEventListener('online', function() {
+            window.location.reload();
+        });
+        
+        window.addEventListener('offline', function() {
+            console.log('Connection lost');
+        });
+        
+        // Auto-retry connection every 30 seconds
+        setInterval(function() {
+            if (navigator.onLine) {
+                window.location.reload();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

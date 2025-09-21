@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${assessment.title} + ' - LearnHub'">Assessment - LearnHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .assessment-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        .question-card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            margin-bottom: 1.5rem;
+        }
+        .question-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .timer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            z-index: 1000;
+        }
+        .progress-bar {
+            height: 8px;
+        }
+        .option-label {
+            cursor: pointer;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        .option-label:hover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+        .option-label.selected {
+            border-color: #667eea;
+            background-color: #e7f3ff;
+        }
+    </style>
+</head>
+<body>
+    <!-- Timer -->
+    <div class="timer" th:if="${assessment.timeLimit}">
+        <i class="fas fa-clock me-2"></i>
+        <span id="timer-display">--:--</span>
+    </div>
+
+    <!-- Assessment Header -->
+    <div class="assessment-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 th:text="${assessment.title}">Assessment Title</h1>
+                    <p class="mb-0" th:text="${assessment.description}">Assessment Description</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="bg-white bg-opacity-20 rounded p-3">
+                        <div class="h4 mb-0" th:text="${assessment.totalPoints} + ' Points'">100 Points</div>
+                        <small>Total Points</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-4">
+        <!-- Progress Bar -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Progress</span>
+                <span class="text-muted"><span id="current-question">1</span> of <span th:text="${#lists.size(assessment.questions)}">10</span></span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: 10%" id="progress-bar"></div>
+            </div>
+        </div>
+
+        <!-- Assessment Form -->
+        <form id="assessment-form" th:action="@{/api/v1/assessments/attempts/{id}/submit(id=${attempt.id})}" method="post">
+            <div id="questions-container">
+                <!-- Questions will be loaded here dynamically -->
+                <div th:each="question, iterStat : ${assessment.questions}" 
+                     th:class="'question-slide' + (${iterStat.index} == 0 ? ' active' : ' d-none')"
+                     th:data-question-index="${iterStat.index}">
+                    
+                    <div class="question-card card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="question-number me-3" th:text="${iterStat.index + 1}">1</div>
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title" th:text="${question.questionText}">Question text goes here?</h5>
+                                    <div class="text-muted mb-3">
+                                        <i class="fas fa-star me-1"></i>
+                                        <span th:text="${question.points} + ' points'">5 points</span>
+                                        <span th:if="${question.isRequired}" class="text-danger ms-2">*Required</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Question Image -->
+                            <div th:if="${question.imageUrl}" class="mb-3">
+                                <img th:src="${question.imageUrl}" class="img-fluid rounded" alt="Question Image">
+                            </div>
+
+                            <!-- Multiple Choice Options -->
+                            <div th:if="${question.type.name()} == 'MULTIPLE_CHOICE'" class="options-container">
+                                <div th:each="option : ${question.options}" class="option-item">
+                                    <label class="option-label w-100" th:for="'option_' + ${question.id} + '_' + ${option.id}">
+                                        <input type="radio" 
+                                               th:id="'option_' + ${question.id} + '_' + ${option.id}"
+                                               th:name="'question_' + ${question.id}" 
+                                               th:value="${option.id}"
+                                               class="form-check-input me-2">
+                                        <span th:text="${option.optionText}">Option text</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- True/False Options -->
+                            <div th:if="${question.type.name()} == 'TRUE_FALSE'" class="options-container">
+                                <label class="option-label w-100" th:for="'true_' + ${question.id}">
+                                    <input type="radio" 
+                                           th:id="'true_' + ${question.id}"
+                                           th:name="'question_' + ${question.id}" 
+                                           value="true"
+                                           class="form-check-input me-2">
+                                    <span>True</span>
+                                </label>
+                                <label class="option-label w-100" th:for="'false_' + ${question.id}">
+                                    <input type="radio" 
+                                           th:id="'false_' + ${question.id}"
+                                           th:name="'question_' + ${question.id}" 
+                                           value="false"
+                                           class="form-check-input me-2">
+                                    <span>False</span>
+                                </label>
+                            </div>
+
+                            <!-- Short Answer -->
+                            <div th:if="${question.type.name()} == 'SHORT_ANSWER'" class="options-container">
+                                <textarea th:name="'question_' + ${question.id}" 
+                                         class="form-control" 
+                                         rows="3" 
+                                         placeholder="Enter your answer here..."></textarea>
+                            </div>
+
+                            <!-- Essay -->
+                            <div th:if="${question.type.name()} == 'ESSAY'" class="options-container">
+                                <textarea th:name="'question_' + ${question.id}" 
+                                         class="form-control" 
+                                         rows="8" 
+                                         placeholder="Write your essay here..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="d-flex justify-content-between mt-4">
+                <button type="button" id="prev-btn" class="btn btn-outline-secondary" disabled>
+                    <i class="fas fa-chevron-left me-2"></i>Previous
+                </button>
+                <div>
+                    <button type="button" id="next-btn" class="btn btn-primary">
+                        Next<i class="fas fa-chevron-right ms-2"></i>
+                    </button>
+                    <button type="submit" id="submit-btn" class="btn btn-success d-none">
+                        <i class="fas fa-check me-2"></i>Submit Assessment
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:inline="javascript">
+        // Assessment configuration
+        const totalQuestions = /*[[${#lists.size(assessment.questions)}]]*/ 10;
+        const timeLimit = /*[[${assessment.timeLimit}]]*/ null; // in minutes
+        const attemptId = /*[[${attempt.id}]]*/ 1;
+        
+        let currentQuestion = 0;
+        let timeRemaining = timeLimit ? timeLimit * 60 : null; // convert to seconds
+        
+        // Initialize assessment
+        document.addEventListener('DOMContentLoaded', function() {
+            updateProgress();
+            updateNavigation();
+            
+            if (timeLimit) {
+                startTimer();
+            }
+            
+            // Auto-save answers
+            setupAutoSave();
+        });
+        
+        // Navigation
+        document.getElementById('next-btn').addEventListener('click', function() {
+            if (currentQuestion < totalQuestions - 1) {
+                saveCurrentAnswer();
+                currentQuestion++;
+                showQuestion(currentQuestion);
+                updateProgress();
+                updateNavigation();
+            }
+        });
+        
+        document.getElementById('prev-btn').addEventListener('click', function() {
+            if (currentQuestion > 0) {
+                saveCurrentAnswer();
+                currentQuestion--;
+                showQuestion(currentQuestion);
+                updateProgress();
+                updateNavigation();
+            }
+        });
+        
+        function showQuestion(index) {
+            document.querySelectorAll('.question-slide').forEach((slide, i) => {
+                if (i === index) {
+                    slide.classList.remove('d-none');
+                    slide.classList.add('active');
+                } else {
+                    slide.classList.add('d-none');
+                    slide.classList.remove('active');
+                }
+            });
+        }
+        
+        function updateProgress() {
+            const progress = ((currentQuestion + 1) / totalQuestions) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+            document.getElementById('current-question').textContent = currentQuestion + 1;
+        }
+        
+        function updateNavigation() {
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            
+            prevBtn.disabled = currentQuestion === 0;
+            
+            if (currentQuestion === totalQuestions - 1) {
+                nextBtn.classList.add('d-none');
+                submitBtn.classList.remove('d-none');
+            } else {
+                nextBtn.classList.remove('d-none');
+                submitBtn.classList.add('d-none');
+            }
+        }
+        
+        function startTimer() {
+            const timerDisplay = document.getElementById('timer-display');
+            
+            const timer = setInterval(function() {
+                if (timeRemaining <= 0) {
+                    clearInterval(timer);
+                    alert('Time is up! Submitting assessment...');
+                    document.getElementById('assessment-form').submit();
+                    return;
+                }
+                
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                timerDisplay.textContent = 
+                    String(minutes).padStart(2, '0') + ':' + 
+                    String(seconds).padStart(2, '0');
+                
+                // Warning when 5 minutes left
+                if (timeRemaining === 300) {
+                    alert('Warning: 5 minutes remaining!');
+                    timerDisplay.parentElement.style.backgroundColor = '#dc3545';
+                }
+                
+                timeRemaining--;
+            }, 1000);
+        }
+        
+        function saveCurrentAnswer() {
+            const currentSlide = document.querySelector('.question-slide.active');
+            const questionId = currentSlide.querySelector('input, textarea').name.split('_')[1];
+            
+            // Get answer based on question type
+            let answer = null;
+            const radioInputs = currentSlide.querySelectorAll('input[type="radio"]:checked');
+            const textInputs = currentSlide.querySelectorAll('textarea');
+            
+            if (radioInputs.length > 0) {
+                answer = radioInputs[0].value;
+            } else if (textInputs.length > 0) {
+                answer = textInputs[0].value;
+            }
+            
+            if (answer) {
+                // Save to server via AJAX
+                fetch(`/api/v1/assessments/attempts/${attemptId}/answers`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        questionId: questionId,
+                        answer: answer
+                    })
+                });
+            }
+        }
+        
+        function setupAutoSave() {
+            // Auto-save every 30 seconds
+            setInterval(saveCurrentAnswer, 30000);
+            
+            // Save on input change
+            document.addEventListener('change', function(e) {
+                if (e.target.matches('input[type="radio"], textarea')) {
+                    setTimeout(saveCurrentAnswer, 1000);
+                }
+            });
+        }
+        
+        // Handle form submission
+        document.getElementById('assessment-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (confirm('Are you sure you want to submit your assessment? You cannot change your answers after submission.')) {
+                saveCurrentAnswer();
+                
+                // Submit the assessment
+                fetch(`/api/v1/assessments/attempts/${attemptId}/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.href = `/assessments/attempts/${attemptId}/results`;
+                    } else {
+                        alert('Error submitting assessment. Please try again.');
+                    }
+                });
+            }
+        });
+        
+        // Prevent accidental page refresh
+        window.addEventListener('beforeunload', function(e) {
+            e.preventDefault();
+            e.returnValue = '';
+        });
+        
+        // Handle option selection styling
+        document.addEventListener('change', function(e) {
+            if (e.target.type === 'radio') {
+                // Remove selected class from all options in this question
+                const questionContainer = e.target.closest('.question-slide');
+                questionContainer.querySelectorAll('.option-label').forEach(label => {
+                    label.classList.remove('selected');
+                });
+                
+                // Add selected class to chosen option
+                e.target.closest('.option-label').classList.add('selected');
+            }
+        });
+    </script>
+</body>
+</html>
