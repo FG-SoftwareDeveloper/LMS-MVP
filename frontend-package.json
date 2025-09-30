@@ -1,0 +1,12 @@
+{
+  "name": "lms-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npm install && npm run build:app",
+    "build:app": "vite build",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

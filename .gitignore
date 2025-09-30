@@ -38,6 +38,16 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 .mvn/wrapper/maven-wrapper.properties
 
+# Security files (NEVER commit these)
+*.key
+*.pem
+*.p12
+*.crt
+secrets/
+credentials/
+.env.secrets
+.npmrc.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -48,6 +58,11 @@ target/
 *.njsproj
 *.sln
 *.sw?
+
+# Emergency backup files
+*.backup
+*.bak
+*.orig
 
 # OS generated files
 Thumbs.db
