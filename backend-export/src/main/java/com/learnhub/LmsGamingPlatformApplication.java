@@ -27,6 +27,14 @@ public class LmsGamingPlatformApplication {
     
     @GetMapping("/api/v1/db-test")
     public String dbTest() {
-        return "Database connection ready";
+        try {
+            java.sql.Connection conn = java.sql.DriverManager.getConnection(System.getenv("DATABASE_URL"));
+            java.sql.Statement stmt = conn.createStatement();
+            stmt.executeQuery("SELECT 1");
+            conn.close();
+            return "Database connection successful";
+        } catch (Exception e) {
+            return "Database connection failed: " + e.getMessage();
+        }
     }
 }
