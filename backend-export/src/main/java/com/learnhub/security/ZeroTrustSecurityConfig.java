@@ -1,20 +1,25 @@
 package com.learnhub.security;
 
+import com.learnhub.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Zero-Trust Security Configuration
@@ -24,9 +29,12 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class ZeroTrustSecurityConfig {
+    
+    @Autowired
+    private UserRepository userRepository;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
             // Disable CSRF for API (using JWT)
             .csrf(csrf -> csrf.disable())
@@ -67,7 +75,10 @@ public class ZeroTrustSecurityConfig {
                 
                 // All other requests require authentication
                 .anyRequest().authenticated()
-            );
+            )
+            
+            // Add JWT authentication filter
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
             
         return http.build();
     }
@@ -79,7 +90,9 @@ public class ZeroTrustSecurityConfig {
         // Strict CORS - Only allow specific origins
         configuration.setAllowedOrigins(Arrays.asList(
             "https://lms-mvp-jet.vercel.app",
-            "https://your-production-domain.com"
+            "https://your-production-domain.com",
+            "http://localhost:5173",
+            "http://localhost:3000"
         ));
         
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -95,5 +108,17 @@ public class ZeroTrustSecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12); // High strength
+    }
+    
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+    
+    @Bean
+    public UserDetailsService userDetailsService() {
+        return username -> userRepository.findByUsername(username)
+                .or(() -> userRepository.findByEmail(username))
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 }

@@ -24,4 +24,9 @@ public class LmsGamingPlatformApplication {
     public String health() {
         return "OK";
     }
+    
+    @GetMapping("/api/v1/db-test")
+    public String dbTest() {
+        return "Database connection ready";
+    }
 }
