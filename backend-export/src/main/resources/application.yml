@@ -1,0 +1,54 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: LMS Gaming Platform
+  
+  # Database configuration - Railway will inject DATABASE_URL
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:mem:testdb}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    database-platform: ${DB_DIALECT:org.hibernate.dialect.H2Dialect}
+  
+  # H2 Console for development
+  h2:
+    console:
+      enabled: false
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:default-secret-key-change-in-production}
+  expiration: 86400000 # 24 hours
+  refresh-expiration: 604800000 # 7 days
+
+# Application Configuration
+app:
+  name: LearnHub Gaming Platform
+  version: 1.0.0
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+
+# Logging
+logging:
+  level:
+    com.learnhub: INFO
+    org.springframework.security: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
