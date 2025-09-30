@@ -1,31 +1,52 @@
 server:
-  port: ${PORT:8080}
+  port: 8080
 
 spring:
   application:
     name: LMS Gaming Platform
   
-  # Database configuration - Railway will inject DATABASE_URL
   datasource:
-    url: ${DATABASE_URL:jdbc:h2:mem:testdb}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
-    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: false
-    database-platform: ${DB_DIALECT:org.hibernate.dialect.H2Dialect}
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
   
-  # H2 Console for development
-  h2:
-    console:
-      enabled: false
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+  
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: test@example.com
+    password: test-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 # JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:default-secret-key-change-in-production}
+  secret: mySecretKey123456789012345678901234567890123456789012345678901234567890
   expiration: 86400000 # 24 hours
   refresh-expiration: 604800000 # 7 days
 
@@ -33,22 +54,12 @@ jwt:
 app:
   name: LearnHub Gaming Platform
   version: 1.0.0
-  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  frontend-url: http://localhost:5173
 
 # Logging
 logging:
   level:
     com.learnhub: INFO
-    org.springframework.security: WARN
+    org.springframework.security: INFO
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
-# Management endpoints
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: always
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

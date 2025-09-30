@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Game Lobby - LearnHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .game-lobby {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .lobby-card {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .player-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+        .player-card.ready {
+            border-color: #28a745;
+            background: rgba(40, 167, 69, 0.2);
+        }
+        .player-card.host {
+            border-color: #ffc107;
+            background: rgba(255, 193, 7, 0.2);
+        }
+        .room-code {
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .game-preview {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="game-lobby">
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Header -->
+                <div class="text-center mb-4">
+                    <h1 class="display-4 mb-2">
+                        <i class="fas fa-gamepad me-3"></i>Game Lobby
+                    </h1>
+                    <p class="lead">Room Code: <span class="room-code" th:text="${gameRoom.roomCode}">ABC123</span></p>
+                    <button class="btn btn-outline-light" onclick="copyRoomCode()">
+                        <i class="fas fa-copy me-1"></i>Copy Code
+                    </button>
+                </div>
+
+                <div class="row">
+                    <!-- Game Info -->
+                    <div class="col-md-6 mb-4">
+                        <div class="lobby-card card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-info-circle me-2"></i>Game Information
+                                </h5>
+                                <div class="game-preview mb-3">
+                                    <img th:src="${gameRoom.game.thumbnailUrl}" 
+                                         th:alt="${gameRoom.game.title}"
+                                         class="img-fluid">
+                                </div>
+                                <h6 th:text="${gameRoom.game.title}">Code Quest Adventure</h6>
+                                <p class="text-muted" th:text="${gameRoom.game.description}">
+                                    Learn programming through adventure gameplay
+                                </p>
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div class="h5 text-primary" th:text="${gameRoom.game.maxScore}">1000</div>
+                                        <small>Max Score</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="h5 text-warning" th:text="${gameRoom.game.difficulty}">MEDIUM</div>
+                                        <small>Difficulty</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="h5 text-info" th:text="${gameRoom.game.timeLimit ? (gameRoom.game.timeLimit / 60) + 'm' : 'No Limit'}">30m</div>
+                                        <small>Time Limit</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Players -->
+                    <div class="col-md-6 mb-4">
+                        <div class="lobby-card card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-users me-2"></i>Players 
+                                        (<span th:text="${gameRoom.currentPlayers}">2</span>/<span th:text="${gameRoom.maxPlayers}">4</span>)
+                                    </h5>
+                                    <div th:if="${gameRoom.host.id == currentUser.id}">
+                                        <button class="btn btn-success btn-sm" 
+                                                id="startGameBtn"
+                                                onclick="startGame()"
+                                                disabled>
+                                            <i class="fas fa-play me-1"></i>Start Game
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div id="playersContainer">
+                                    <div th:each="participant : ${gameRoom.participants}" 
+                                         class="player-card"
+                                         th:classappend="${participant.user.id == gameRoom.host.id} ? 'host' : (${participant.isReady} ? 'ready' : '')">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center">
+                                                <img th:src="${participant.user.avatarUrl}" 
+                                                     th:alt="${participant.user.fullName}"
+                                                     class="rounded-circle me-3" 
+                                                     width="40" height="40"
+                                                     th:if="${participant.user.avatarUrl}">
+                                                <div th:unless="${participant.user.avatarUrl}" 
+                                                     class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                     style="width: 40px; height: 40px;">
+                                                    <i class="fas fa-user text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0" th:text="${participant.user.fullName}">John Doe</h6>
+                                                    <small th:if="${participant.user.id == gameRoom.host.id}" class="text-warning">
+                                                        <i class="fas fa-crown me-1"></i>Host
+                                                    </small>
+                                                    <small th:unless="${participant.user.id == gameRoom.host.id}" class="text-muted">
+                                                        Player
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="text-end">
+                                                <div th:if="${participant.isReady}" class="text-success">
+                                                    <i class="fas fa-check-circle fa-lg"></i>
+                                                    <div class="small">Ready</div>
+                                                </div>
+                                                <div th:unless="${participant.isReady}" class="text-muted">
+                                                    <i class="fas fa-clock fa-lg"></i>
+                                                    <div class="small">Waiting</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Ready Button for Current User -->
+                                <div class="text-center mt-3" th:if="${!currentUserReady}">
+                                    <button class="btn btn-success" onclick="toggleReady()">
+                                        <i class="fas fa-check me-1"></i>Ready Up!
+                                    </button>
+                                </div>
+                                <div class="text-center mt-3" th:if="${currentUserReady}">
+                                    <button class="btn btn-outline-light" onclick="toggleReady()">
+                                        <i class="fas fa-times me-1"></i>Not Ready
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game Settings (Host Only) -->
+                <div class="row" th:if="${gameRoom.host.id == currentUser.id}">
+                    <div class="col-12">
+                        <div class="lobby-card card">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-cog me-2"></i>Game Settings
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Max Players</label>
+                                        <select class="form-select" id="maxPlayers" onchange="updateSettings()">
+                                            <option value="2">2 Players</option>
+                                            <option value="4" selected>4 Players</option>
+                                            <option value="6">6 Players</option>
+                                            <option value="8">8 Players</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Game Mode</label>
+                                        <select class="form-select" id="gameMode" onchange="updateSettings()">
+                                            <option value="competitive">Competitive</option>
+                                            <option value="cooperative">Cooperative</option>
+                                            <option value="practice">Practice</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Time Limit</label>
+                                        <select class="form-select" id="timeLimit" onchange="updateSettings()">
+                                            <option value="0">No Limit</option>
+                                            <option value="1800" selected>30 Minutes</option>
+                                            <option value="3600">60 Minutes</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="text-center mt-4">
+                    <button class="btn btn-outline-light btn-lg me-3" onclick="leaveRoom()">
+                        <i class="fas fa-sign-out-alt me-2"></i>Leave Room
+                    </button>
+                    <button class="btn btn-light btn-lg" onclick="inviteFriends()">
+                        <i class="fas fa-user-plus me-2"></i>Invite Friends
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script th:inline="javascript">
+        const roomId = /*[[${gameRoom.id}]]*/ 1;
+        const currentUserId = /*[[${currentUser.id}]]*/ 1;
+        const isHost = /*[[${gameRoom.host.id == currentUser.id}]]*/ false;
+        
+        // WebSocket connection for real-time updates
+        const socket = io('/multiplayer');
+        
+        socket.emit('join-room', { roomId: roomId, userId: currentUserId });
+        
+        socket.on('player-joined', function(data) {
+            updatePlayersList(data.participants);
+        });
+        
+        socket.on('player-left', function(data) {
+            updatePlayersList(data.participants);
+        });
+        
+        socket.on('player-ready-changed', function(data) {
+            updatePlayersList(data.participants);
+            updateStartButton();
+        });
+        
+        socket.on('game-started', function(data) {
+            window.location.href = `/games/${data.gameId}/multiplayer/${roomId}`;
+        });
+        
+        function toggleReady() {
+            fetch(`/api/v1/multiplayer/rooms/${roomId}/ready`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+        
+        function startGame() {
+            if (isHost) {
+                fetch(`/api/v1/multiplayer/rooms/${roomId}/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        socket.emit('start-game', { roomId: roomId });
+                    } else {
+                        alert('Error starting game: ' + data.message);
+                    }
+                });
+            }
+        }
+        
+        function leaveRoom() {
+            if (confirm('Are you sure you want to leave the room?')) {
+                fetch(`/api/v1/multiplayer/rooms/${roomId}/leave`, {
+                    method: 'POST'
+                })
+                .then(() => {
+                    window.location.href = '/games';
+                });
+            }
+        }
+        
+        function copyRoomCode() {
+            const roomCode = /*[[${gameRoom.roomCode}]]*/ 'ABC123';
+            navigator.clipboard.writeText(roomCode).then(() => {
+                alert('Room code copied to clipboard!');
+            });
+        }
+        
+        function inviteFriends() {
+            const roomCode = /*[[${gameRoom.roomCode}]]*/ 'ABC123';
+            const shareText = `Join my multiplayer game on LearnHub! Room code: ${roomCode}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Join My Game',
+                    text: shareText,
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    alert('Invitation copied to clipboard!');
+                });
+            }
+        }
+        
+        function updateSettings() {
+            if (isHost) {
+                const settings = {
+                    maxPlayers: document.getElementById('maxPlayers').value,
+                    gameMode: document.getElementById('gameMode').value,
+                    timeLimit: document.getElementById('timeLimit').value
+                };
+                
+                fetch(`/api/v1/multiplayer/rooms/${roomId}/settings`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(settings)
+                });
+            }
+        }
+        
+        function updatePlayersList(participants) {
+            // Update players list dynamically
+            // Implementation would update the DOM with new participant data
+        }
+        
+        function updateStartButton() {
+            // Enable start button only if all players are ready
+            // Implementation would check ready status and update button
+        }
+        
+        // Prevent accidental page refresh
+        window.addEventListener('beforeunload', function(e) {
+            e.preventDefault();
+            e.returnValue = 'Are you sure you want to leave the game lobby?';
+        });
+    </script>
+</body>
+</html>
