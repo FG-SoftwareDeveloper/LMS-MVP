@@ -23,6 +23,20 @@ export interface Course {
   updatedAt: string;
 }
 
+export type WorkspaceEnvironment = 'stackblitz' | 'codesandbox';
+
+export interface LessonWorkspace {
+  assignmentSlug: string;
+  templateSlug: string;
+  stackblitzUrl?: string;
+  codesandboxUrl?: string;
+  preferredEnvironment?: WorkspaceEnvironment;
+  repoUrl?: string;
+  zipUrl?: string;
+  docsUrl?: string;
+  instructions?: string[];
+}
+
 export interface Module {
   id: string;
   title: string;
@@ -43,6 +57,7 @@ export interface Lesson {
   duration: number;
   order: number;
   isCompleted: boolean;
+  workspace?: LessonWorkspace;
 }
 
 interface CourseState {

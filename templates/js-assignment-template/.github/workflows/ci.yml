@@ -1,0 +1,56 @@
+name: Assignment CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - 'assign/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --reporter=junit --outputFile=./test-results.xml
+
+      - name: Collect Vitest summary
+        id: vitest
+        run: |
+          summary=$(node ./scripts/parse-vitest-summary.js)
+          echo "summary=$summary" >> $GITHUB_OUTPUT
+        env:
+          VITEST_OUTPUT: ./coverage/coverage-summary.json
+
+      - name: Notify LMS webhook
+        if: always()
+        run: |
+          curl -X POST "$LMS_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\
+              \"studentHandle\": \"${{ github.actor }}\",\
+              \"repo\": \"${{ github.repository }}\",\
+              \"branch\": \"${{ github.ref_name }}\",\
+              \"commit\": \"${{ github.sha }}\",\
+              \"assignmentSlug\": \"${{ github.event.pull_request.head.ref || github.ref_name }}\",\
+              \"status\": \"${{ job.status }}\",\
+              \"summary\": ${{ steps.vitest.outputs.summary }},\
+              \"prUrl\": \"${{ github.event.pull_request.html_url || '' }}\",\
+              \"workflowUrl\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"\
+            }"
+        env:
+          LMS_WEBHOOK_URL: ${{ secrets.LMS_WEBHOOK_URL }}

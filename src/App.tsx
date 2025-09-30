@@ -22,6 +22,7 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import Dashboard from './pages/dashboard/Dashboard';
 import CourseCatalog from './pages/courses/CourseCatalog';
 import CourseDetail from './pages/courses/CourseDetail';
+import LessonViewer from './pages/courses/LessonViewer';
 import GameHub from './pages/games/GameHub';
 import GameSession from './pages/games/GameSession';
 import Assessments from './pages/assessments/Assessments';
@@ -74,6 +75,11 @@ const AppRoutes: React.FC = () => {
       <Route path="/courses/:id" element={
         <ProtectedRoute>
           <Layout><CourseDetail /></Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/courses/:courseId/modules/:moduleId/lessons/:lessonId" element={
+        <ProtectedRoute>
+          <LessonViewer />
         </ProtectedRoute>
       } />
       <Route path="/games" element={

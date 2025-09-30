@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, BookOpen, Star } from 'lucide-react';
+import { Search, Grid, List, BookOpen } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import { setCourses, setLoading } from '../../store/slices/courseSlice';
 import CourseCard from '../../components/courses/CourseCard';
+import JSCoverImg from '../../assets/images/JSCover.png';
+import GOCoverImg from '../../assets/images/GOCover.png';
+import CybersecurityCoverImg from '../../assets/images/CybersecurityCover.png';
+import PythonCoverImg from '../../assets/images/PythonCover.png';
+import ReactCoverImg from '../../assets/images/ReactCover.png';
 
 const CourseCatalog: React.FC = () => {
   const dispatch = useDispatch();
@@ -20,7 +25,7 @@ const CourseCatalog: React.FC = () => {
       id: '1',
       title: 'JavaScript Fundamentals',
       description: 'Learn the basics of JavaScript programming with hands-on exercises and real-world projects.',
-      thumbnail: 'https://images.pexels.com/photos/11035386/pexels-photo-11035386.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+      thumbnail: JSCoverImg,
       instructor: { id: '1', firstName: 'John', lastName: 'Doe', avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1' },
       category: 'Programming',
       level: 'BEGINNER' as const,
@@ -36,7 +41,7 @@ const CourseCatalog: React.FC = () => {
       id: '2',
       title: 'React Development Masterclass',
       description: 'Master React.js with advanced concepts, hooks, context, and modern development practices.',
-      thumbnail: 'https://images.pexels.com/photos/4164418/pexels-photo-4164418.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+      thumbnail: ReactCoverImg,
       instructor: { id: '2', firstName: 'Sarah', lastName: 'Smith', avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1' },
       category: 'Web Development',
       level: 'INTERMEDIATE' as const,
@@ -53,7 +58,7 @@ const CourseCatalog: React.FC = () => {
       id: '3',
       title: 'Python for Data Science',
       description: 'Comprehensive Python course focusing on data analysis, visualization, and machine learning.',
-      thumbnail: 'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+      thumbnail: PythonCoverImg,
       instructor: { id: '3', firstName: 'Michael', lastName: 'Johnson', avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1' },
       category: 'Data Science',
       level: 'INTERMEDIATE' as const,
@@ -102,7 +107,7 @@ const CourseCatalog: React.FC = () => {
       id: '6',
       title: 'Cybersecurity Fundamentals',
       description: 'Learn essential cybersecurity concepts, threat analysis, and protection strategies.',
-      thumbnail: 'https://images.pexels.com/photos/60504/security-protection-anti-virus-software-60504.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+      thumbnail: CybersecurityCoverImg,
       instructor: { id: '6', firstName: 'Lisa', lastName: 'Anderson', avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1' },
       category: 'Cybersecurity',
       level: 'BEGINNER' as const,
@@ -113,6 +118,22 @@ const CourseCatalog: React.FC = () => {
       isEnrolled: false,
       createdAt: '2023-12-20',
       updatedAt: '2024-01-05',
+    },
+    {
+      id: '7',
+      title: 'Go for Cloud Services',
+      description: "Build scalable microservices and cloud-native workloads with Go's simplicity and concurrency primitives.",
+      thumbnail: GOCoverImg,
+      instructor: { id: '7', firstName: 'Michael', lastName: 'Chen', avatar: 'https://images.pexels.com/photos/3184300/pexels-photo-3184300.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1' },
+      category: 'Cloud & Backend',
+      level: 'INTERMEDIATE' as const,
+      duration: 360,
+      enrollmentCount: 742,
+      rating: 4.7,
+      price: 79,
+      isEnrolled: false,
+      createdAt: '2024-01-18',
+      updatedAt: '2024-01-18',
     },
   ];
 
@@ -125,7 +146,7 @@ const CourseCatalog: React.FC = () => {
     }, 1000);
   }, [dispatch]);
 
-  const categories = ['all', 'Programming', 'Web Development', 'Data Science', 'AI & Machine Learning', 'Mobile Development', 'Cybersecurity'];
+  const categories = ['all', 'Programming', 'Web Development', 'Data Science', 'AI & Machine Learning', 'Mobile Development', 'Cybersecurity', 'Cloud & Backend'];
   const levels = ['all', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 
   const filteredCourses = courses.filter(course => {
