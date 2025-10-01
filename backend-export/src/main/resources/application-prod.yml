@@ -1,22 +1,19 @@
 # Production Configuration
 server:
   port: 8080
-  servlet:
-    context-path: /
-  compression:
-    enabled: true
-
-spring:
-  application:
-    name: LMS Gaming Platform
-
-  # ===== Database (Railway MySQL) =====
-  datasource:
-    url: ${DATABASE_URL}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 5
-      minimum-idle: 1
+  spring:
+    application:
+      name: LMS Gaming Platform
+    datasource:
+      url: ${DATABASE_URL}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 1
+        connection-timeout: 60000
+        idle-timeout: 300000
+        max-lifetime: 900000
+        leak-detection-threshold: 60000
       connection-timeout: 60000
       idle-timeout: 300000
       max-lifetime: 900000
