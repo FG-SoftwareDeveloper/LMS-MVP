@@ -1,0 +1,39 @@
+# Neon (PostgreSQL) profile configuration
+
+spring:
+  datasource:
+    # Use env vars; provide a safe default URL without embedding credentials
+    url: ${DATABASE_URL:jdbc:postgresql://ep-cool-sound-adc8nufr-pooler.c-2.us-east-1.aws.neon.tech:5432/neondb?sslmode=require&channelBinding=require}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 60000
+      idle-timeout: 300000
+      max-lifetime: 900000
+      leak-detection-threshold: 60000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Notes:
+# - Set SPRING_PROFILES_ACTIVE=neon to enable this profile
+# - Set DATABASE_URL to the full JDBC URL from Neon, e.g.:
+#   jdbc:postgresql://ep-xxxx.neon.tech:5432/dbname?user=neondb_user&password=secret&sslmode=require

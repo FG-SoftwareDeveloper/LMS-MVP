@@ -5,11 +5,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import javax.sql.DataSource;
 
 @SpringBootApplication
 @RestController
 @CrossOrigin(origins = "*")
 public class LmsGamingPlatformApplication {
+    private final DataSource dataSource;
+    public LmsGamingPlatformApplication(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
     
     public static void main(String[] args) {
         SpringApplication.run(LmsGamingPlatformApplication.class, args);
@@ -27,11 +32,9 @@ public class LmsGamingPlatformApplication {
     
     @GetMapping("/api/v1/db-test")
     public String dbTest() {
-        try {
-            java.sql.Connection conn = java.sql.DriverManager.getConnection(System.getenv("DATABASE_URL"));
-            java.sql.Statement stmt = conn.createStatement();
-            stmt.executeQuery("SELECT 1");
-            conn.close();
+        try (java.sql.Connection conn = dataSource.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("SELECT 1");
             return "Database connection successful";
         } catch (Exception e) {
             return "Database connection failed: " + e.getMessage();
