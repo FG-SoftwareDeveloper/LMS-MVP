@@ -57,7 +57,7 @@ public class ZeroTrustSecurityConfig {
             // Authorization Rules
             .authorizeHttpRequests(authz -> authz
                 // Public endpoints
-                .requestMatchers("/", "/api/v1/health", "/actuator/health").permitAll()
+                .requestMatchers("/", "/api/v1/health", "/actuator/health", "/health").permitAll()
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/public/**").permitAll()
                 
