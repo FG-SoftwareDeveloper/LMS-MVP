@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { 
-  BookOpen, 
-  Gamepad2, 
-  Trophy, 
+import {
+  BookOpen,
+  Gamepad2,
+  Trophy,
   Target,
   TrendingUp,
   Users,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { RootState } from '../../store/store';
 import { useAuth } from '../../hooks/useAuth';
+import { courseService } from '../../services/supabase';
+import { Course } from '../../store/slices/courseSlice';
 import StatsCard from '../../components/dashboard/StatsCard';
 import CourseCard from '../../components/courses/CourseCard';
 import GameCard from '../../components/games/GameCard';
@@ -23,51 +25,61 @@ import ProgressChart from '../../components/dashboard/ProgressChart';
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const dispatch = useDispatch();
-  
-  // Mock data - in real app, this would come from API
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEnrolledCourses = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const enrollments = await courseService.getEnrolledCourses(user.id);
+
+        const courses: Course[] = enrollments.map((enrollment: any) => ({
+          id: enrollment.courses.id,
+          title: enrollment.courses.title,
+          description: enrollment.courses.description,
+          thumbnail: enrollment.courses.thumbnail,
+          instructor: {
+            id: '',
+            firstName: enrollment.courses.instructor_name?.split(' ')[0] || '',
+            lastName: enrollment.courses.instructor_name?.split(' ')[1] || '',
+            avatar: enrollment.courses.instructor_avatar,
+          },
+          category: enrollment.courses.category,
+          level: enrollment.courses.level,
+          duration: enrollment.courses.duration,
+          enrollmentCount: enrollment.courses.enrollment_count,
+          rating: enrollment.courses.rating,
+          price: enrollment.courses.price,
+          isEnrolled: true,
+          progress: enrollment.progress,
+          createdAt: enrollment.courses.created_at,
+          updatedAt: enrollment.courses.updated_at,
+        }));
+
+        setEnrolledCourses(courses);
+      } catch (error) {
+        console.error('Error loading enrolled courses:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadEnrolledCourses();
+  }, [user]);
+
   const stats = {
-    coursesEnrolled: 8,
-    coursesCompleted: 5,
+    coursesEnrolled: enrolledCourses.length,
+    coursesCompleted: enrolledCourses.filter(c => c.progress === 100).length,
     gamesPlayed: 24,
     totalPoints: 2840,
     currentStreak: 7,
     achievements: 18,
   };
-
-  const recentCourses = [
-    {
-      id: '1',
-      title: 'JavaScript Fundamentals',
-      thumbnail: 'https://images.pexels.com/photos/11035386/pexels-photo-11035386.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&dpr=1',
-      progress: 75,
-      instructor: { firstName: 'John', lastName: 'Doe' },
-      category: 'Programming',
-      level: 'BEGINNER' as const,
-      duration: 120,
-      enrollmentCount: 1520,
-      rating: 4.8,
-      price: 0,
-      isEnrolled: true,
-      createdAt: '2024-01-15',
-      updatedAt: '2024-01-20',
-    },
-    {
-      id: '2',
-      title: 'React Development',
-      thumbnail: 'https://images.pexels.com/photos/4164418/pexels-photo-4164418.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&dpr=1',
-      progress: 45,
-      instructor: { firstName: 'Sarah', lastName: 'Smith' },
-      category: 'Web Development',
-      level: 'INTERMEDIATE' as const,
-      duration: 180,
-      enrollmentCount: 980,
-      rating: 4.9,
-      price: 49,
-      isEnrolled: true,
-      createdAt: '2024-01-10',
-      updatedAt: '2024-01-18',
-    },
-  ];
 
   const recentGames = [
     {
@@ -208,11 +220,29 @@ const Dashboard: React.FC = () => {
                 View all courses
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {recentCourses.map((course) => (
-                <CourseCard key={course.id} course={course} compact />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : enrolledCourses.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {enrolledCourses.slice(0, 4).map((course) => (
+                  <CourseCard key={course.id} course={course} compact />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <BookOpen className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No enrolled courses yet</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">Start your learning journey by enrolling in a course</p>
+                <a
+                  href="/courses"
+                  className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Browse Courses
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Recent Games */}

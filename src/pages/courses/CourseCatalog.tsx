@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Search, Grid, List, BookOpen } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
-import { setCourses, setLoading } from '../../store/slices/courseSlice';
+import { setCourses, setLoading, Course } from '../../store/slices/courseSlice';
+import { courseService } from '../../services/supabase';
+import { useAuth } from '../../hooks/useAuth';
 import CourseCard from '../../components/courses/CourseCard';
 import JSCoverImg from '../../assets/images/JSCover.png';
 import GOCoverImg from '../../assets/images/GOCover.png';
@@ -12,6 +14,7 @@ import ReactCoverImg from '../../assets/images/ReactCover.png';
 
 const CourseCatalog: React.FC = () => {
   const dispatch = useDispatch();
+  const { user } = useAuth();
   const { courses, isLoading } = useSelector((state: RootState) => state.course);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -138,13 +141,62 @@ const CourseCatalog: React.FC = () => {
   ];
 
   useEffect(() => {
-    dispatch(setLoading(true));
-    // Simulate API call
-    setTimeout(() => {
-      dispatch(setCourses(mockCourses));
-      dispatch(setLoading(false));
-    }, 1000);
-  }, [dispatch]);
+    const loadCourses = async () => {
+      dispatch(setLoading(true));
+      try {
+        const coursesData = await courseService.getAllCourses();
+
+        const enrollmentStatus = user
+          ? await Promise.all(
+              coursesData.map(async (course) => {
+                const isEnrolled = await courseService.isEnrolled(user.id, course.id);
+                return isEnrolled;
+              })
+            )
+          : coursesData.map(() => false);
+
+        const formattedCourses: Course[] = coursesData.map((course, index) => {
+          const imageMap: Record<string, string> = {
+            'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11': JSCoverImg,
+            'b1ffcd99-9c0b-4ef8-bb6d-6bb9bd380a22': ReactCoverImg,
+            'c2aade99-9c0b-4ef8-bb6d-6bb9bd380a33': PythonCoverImg,
+            'f5dd0199-9c0b-4ef8-bb6d-6bb9bd380a66': CybersecurityCoverImg,
+            '06ee1299-9c0b-4ef8-bb6d-6bb9bd380a77': GOCoverImg,
+          };
+
+          return {
+            id: course.id,
+            title: course.title,
+            description: course.description || '',
+            thumbnail: imageMap[course.id] || course.thumbnail || '',
+            instructor: {
+              id: '',
+              firstName: course.instructor_name?.split(' ')[0] || '',
+              lastName: course.instructor_name?.split(' ')[1] || '',
+              avatar: course.instructor_avatar || '',
+            },
+            category: course.category,
+            level: course.level,
+            duration: course.duration,
+            enrollmentCount: course.enrollment_count,
+            rating: course.rating,
+            price: course.price,
+            isEnrolled: enrollmentStatus[index],
+            createdAt: course.created_at,
+            updatedAt: course.updated_at,
+          };
+        });
+
+        dispatch(setCourses(formattedCourses));
+      } catch (error) {
+        console.error('Error loading courses:', error);
+      } finally {
+        dispatch(setLoading(false));
+      }
+    };
+
+    loadCourses();
+  }, [dispatch, user]);
 
   const categories = ['all', 'Programming', 'Web Development', 'Data Science', 'AI & Machine Learning', 'Mobile Development', 'Cybersecurity', 'Cloud & Backend'];
   const levels = ['all', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'];

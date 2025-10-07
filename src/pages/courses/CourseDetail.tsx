@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { 
-  Play, 
-  Clock, 
-  Users, 
-  Star, 
-  BookOpen, 
-  Award, 
+import {
+  Play,
+  Clock,
+  Users,
+  Star,
+  BookOpen,
+  Award,
   CheckCircle,
   Lock,
   ArrowLeft,
@@ -16,6 +16,9 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import { setCurrentCourse, setModules, Course } from '../../store/slices/courseSlice';
+import { courseService } from '../../services/supabase';
+import { useAuth } from '../../hooks/useAuth';
+import toast from 'react-hot-toast';
 import JSCoverImg from '../../assets/images/JSCover.png';
 import GOCoverImg from '../../assets/images/GOCover.png';
 import CybersecurityCoverImg from '../../assets/images/CybersecurityCover.png';
@@ -25,18 +28,30 @@ import ReactCoverImg from '../../assets/images/ReactCover.png';
 const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch();
+  const { user } = useAuth();
   const { currentCourse, modules } = useSelector((state: RootState) => state.course);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isEnrolling, setIsEnrolling] = useState(false);
 
-  // Enrollment handler
-  const handleEnrollment = () => {
-    // In a real app, this would make an API call
-    if (currentCourse) {
+  const handleEnrollment = async () => {
+    if (!user || !currentCourse) return;
+
+    setIsEnrolling(true);
+    try {
+      await courseService.enrollInCourse(user.id, currentCourse.id);
+
       const updatedCourse: Course = {
         ...currentCourse,
         isEnrolled: true,
       };
       dispatch(setCurrentCourse(updatedCourse));
+
+      toast.success('Successfully enrolled in course!');
+    } catch (error: any) {
+      console.error('Enrollment error:', error);
+      toast.error('Failed to enroll in course. Please try again.');
+    } finally {
+      setIsEnrolling(false);
     }
   };
 
@@ -647,12 +662,21 @@ const CourseDetail: React.FC = () => {
     }
   };
 
-  // Mock data - in real app, this would come from API
   useEffect(() => {
-    const courseData = getCourseData(id!);
-    dispatch(setCurrentCourse(courseData.course));
-    dispatch(setModules(courseData.modules));
-  }, [id, dispatch]);
+    const loadCourseData = async () => {
+      const courseData = getCourseData(id!);
+
+      if (user) {
+        const isEnrolled = await courseService.isEnrolled(user.id, courseData.course.id);
+        courseData.course.isEnrolled = isEnrolled;
+      }
+
+      dispatch(setCurrentCourse(courseData.course));
+      dispatch(setModules(courseData.modules));
+    };
+
+    loadCourseData();
+  }, [id, user, dispatch]);
 
   if (!currentCourse) {
     return (
@@ -779,12 +803,22 @@ const CourseDetail: React.FC = () => {
               {currentCourse.price === 0 ? 'Free' : `$${currentCourse.price}`}
             </div>
             {!currentCourse.isEnrolled ? (
-              <button 
+              <button
                 onClick={handleEnrollment}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                disabled={isEnrolling}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <BookOpen className="h-5 w-5" />
-                <span>Enroll Now</span>
+                {isEnrolling ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                    <span>Enrolling...</span>
+                  </>
+                ) : (
+                  <>
+                    <BookOpen className="h-5 w-5" />
+                    <span>Enroll Now</span>
+                  </>
+                )}
               </button>
             ) : (
               <Link
