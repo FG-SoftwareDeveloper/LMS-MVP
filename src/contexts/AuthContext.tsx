@@ -2,29 +2,7 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { loginStart, loginSuccess, loginFailure, logout, setLoading } from '../store/slices/authSlice';
-
-// Dummy user data for testing
-const DUMMY_USER = {
-  id: '1',
-  email: 'admin@learnhub.com',
-  firstName: 'John',
-  lastName: 'Doe',
-  role: 'ADMIN' as const,
-  avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1',
-  isEmailVerified: true,
-  createdAt: '2024-01-01T00:00:00Z',
-  lastLoginAt: new Date().toISOString(),
-};
-
-const DUMMY_TOKEN = 'dummy-jwt-token-12345';
-
-// Valid login credentials
-const VALID_CREDENTIALS = [
-  { email: 'admin@learnhub.com', password: 'admin123' },
-  { email: 'user@learnhub.com', password: 'user123' },
-  { email: 'student@learnhub.com', password: 'student123' },
-  { email: 'instructor@learnhub.com', password: 'instructor123' },
-];
+import { supabase } from '../services/supabase';
 
 interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
@@ -38,108 +16,151 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dispatch = useDispatch();
-  const { token } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    const validateToken = async () => {
-      if (token) {
-        // Simulate token validation with dummy user
-        if (token === DUMMY_TOKEN) {
-          dispatch(loginSuccess({ user: DUMMY_USER, token }));
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          const user = {
+            id: session.user.id,
+            email: session.user.email || '',
+            firstName: session.user.user_metadata?.firstName || session.user.email?.split('@')[0] || 'User',
+            lastName: session.user.user_metadata?.lastName || '',
+            role: 'STUDENT' as const,
+            avatar: session.user.user_metadata?.avatar,
+            isEmailVerified: !!session.user.email_confirmed_at,
+            createdAt: session.user.created_at,
+            lastLoginAt: new Date().toISOString(),
+          };
+
+          dispatch(loginSuccess({ user, token: session.access_token }));
         } else {
-          dispatch(logout());
+          dispatch(setLoading(false));
         }
-      } else {
+      } catch (error) {
+        console.error('Session check error:', error);
         dispatch(setLoading(false));
       }
     };
 
-    validateToken();
-  }, [dispatch, token]);
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const user = {
+          id: session.user.id,
+          email: session.user.email || '',
+          firstName: session.user.user_metadata?.firstName || session.user.email?.split('@')[0] || 'User',
+          lastName: session.user.user_metadata?.lastName || '',
+          role: 'STUDENT' as const,
+          avatar: session.user.user_metadata?.avatar,
+          isEmailVerified: !!session.user.email_confirmed_at,
+          createdAt: session.user.created_at,
+          lastLoginAt: new Date().toISOString(),
+        };
+
+        dispatch(loginSuccess({ user, token: session.access_token }));
+      } else {
+        dispatch(logout());
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [dispatch]);
 
   const login = async (email: string, password: string) => {
     dispatch(loginStart());
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check if credentials are valid
-    const validCredential = VALID_CREDENTIALS.find(
-      cred => cred.email === email && cred.password === password
-    );
-    
-    if (validCredential) {
-      // Create user based on email
-      let user = { ...DUMMY_USER };
-      if (email === 'student@learnhub.com') {
-        user = { ...user, role: 'STUDENT' as const, firstName: 'Jane', lastName: 'Student' };
-      } else if (email === 'instructor@learnhub.com') {
-        user = { ...user, role: 'INSTRUCTOR' as const, firstName: 'Mike', lastName: 'Instructor' };
-      } else if (email === 'user@learnhub.com') {
-        user = { ...user, role: 'STUDENT' as const, firstName: 'Alex', lastName: 'User' };
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const user = {
+          id: data.user.id,
+          email: data.user.email || '',
+          firstName: data.user.user_metadata?.firstName || data.user.email?.split('@')[0] || 'User',
+          lastName: data.user.user_metadata?.lastName || '',
+          role: 'STUDENT' as const,
+          avatar: data.user.user_metadata?.avatar,
+          isEmailVerified: !!data.user.email_confirmed_at,
+          createdAt: data.user.created_at,
+          lastLoginAt: new Date().toISOString(),
+        };
+
+        dispatch(loginSuccess({ user, token: data.session?.access_token || '' }));
       }
-      
-      user.email = email;
-      user.lastLoginAt = new Date().toISOString();
-      
-      dispatch(loginSuccess({
-        user,
-        token: DUMMY_TOKEN,
-      }));
-    } else {
-      dispatch(loginFailure('Invalid email or password'));
-      throw new Error('Invalid email or password');
+    } catch (error: any) {
+      dispatch(loginFailure(error.message || 'Login failed'));
+      throw error;
     }
   };
 
   const register = async (userData: any) => {
     dispatch(loginStart());
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Create new user from registration data
-    const newUser = {
-      id: Date.now().toString(),
-      email: userData.email,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      role: 'STUDENT' as const,
-      avatar: undefined,
-      isEmailVerified: true,
-      createdAt: new Date().toISOString(),
-      lastLoginAt: new Date().toISOString(),
-    };
-    
+
     try {
-      dispatch(loginSuccess({
-        user: newUser,
-        token: DUMMY_TOKEN,
-      }));
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const user = {
+          id: data.user.id,
+          email: data.user.email || '',
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          role: 'STUDENT' as const,
+          avatar: undefined,
+          isEmailVerified: !!data.user.email_confirmed_at,
+          createdAt: data.user.created_at,
+          lastLoginAt: new Date().toISOString(),
+        };
+
+        dispatch(loginSuccess({ user, token: data.session?.access_token || '' }));
+      }
     } catch (error: any) {
-      dispatch(loginFailure('Registration failed'));
+      dispatch(loginFailure(error.message || 'Registration failed'));
       throw error;
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     dispatch(logout());
   };
 
   const forgotPassword = async (email: string) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Always succeed for demo purposes
-    return Promise.resolve();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) throw error;
   };
 
   const resetPassword = async (token: string, password: string) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Always succeed for demo purposes
-    return Promise.resolve();
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
+
+    if (error) throw error;
   };
 
   return (
